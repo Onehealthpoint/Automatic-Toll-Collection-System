@@ -1,0 +1,55 @@
+# Python virtual environments
+venv/
+env/
+*.pyc
+__pycache__/
+
+# IDE settings
+.idea/
+.vscode/
+
+# Images and videos
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.tiff
+*.svg
+*.ico
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.webm
+
+# Model files
+*.h5
+*.pt
+*.pth
+*.ckpt
+*.pb
+*.onnx
+*.joblib
+*.pkl
+
+# Large data files
+*.csv
+*.tsv
+*.xlsx
+*.xls
+*.json
+*.xml
+
+# Logs and outputs
+*.log
+*.out
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Other non-important files
+*.tmp
+*.bak
+*.swp
