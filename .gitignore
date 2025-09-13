@@ -5,7 +5,9 @@ env/
 __pycache__/
 
 # IDE settings
+.idea
 .idea/
+idea/
 .vscode/
 
 # Images and videos
