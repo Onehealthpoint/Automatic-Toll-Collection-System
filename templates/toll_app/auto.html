@@ -1,10 +1,420 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Auto</title>
-</head>
-<body>
+<!-- toll_app/templates/toll_app/auto.html -->
+{% extends 'toll_app/base.html' %}
 
-</body>
-</html>
+{% block title %}Auto Detection - Vehicle Management System{% endblock %}
+
+{% block extra_css %}
+<style>
+    #video-container {
+        position: relative;
+        max-width: 100%;
+        margin: 0 auto;
+        background: #000;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    #video-feed {
+        width: 100%;
+        border: 2px solid #007bff;
+        border-radius: 8px;
+        display: none; /* Hidden initially */
+    }
+    #video-placeholder {
+        width: 100%;
+        height: 480px;
+        background: #f8f9fa;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 2px dashed #dee2e6;
+        border-radius: 8px;
+    }
+    .controls {
+        margin: 20px 0;
+        text-align: center;
+    }
+    .status-panel {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        margin-top: 20px;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    .detection-item {
+        padding: 8px;
+        border-bottom: 1px solid #dee2e6;
+    }
+    .detection-success {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    .detection-warning {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+    .detection-error {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    .detection-info {
+        background-color: #d1ecf1;
+        color: #0c5460;
+    }
+    #loading-spinner {
+        display: none;
+        text-align: center;
+        margin: 20px 0;
+    }
+    .stream-status {
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-size: 0.9em;
+        margin-left: 10px;
+    }
+    .status-active {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    .status-inactive {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4">
+                <i class="bi bi-camera-video me-2"></i>Automatic Vehicle Detection
+            </h2>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-play-circle me-2"></i>Live Feed
+                        <span id="stream-status" class="stream-status status-inactive">Inactive</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="video-container">
+                        <div id="video-placeholder">
+                            <div class="text-center">
+                                <i class="bi bi-camera-video-off display-4 text-muted"></i>
+                                <p class="mt-2 text-muted">Video feed will appear here</p>
+                            </div>
+                        </div>
+                        <img id="video-feed" src="" alt="Live video feed">
+                    </div>
+
+                    <div id="loading-spinner">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Starting video stream...</p>
+                    </div>
+
+                    <div class="controls">
+                        <button id="start-btn" class="btn btn-success me-2">
+                            <i class="bi bi-play-fill me-1"></i>Start Detection
+                        </button>
+                        <button id="stop-btn" class="btn btn-danger me-2" disabled>
+                            <i class="bi bi-stop-fill me-1"></i>Stop Detection
+                        </button>
+                        <button id="refresh-btn" class="btn btn-info me-2">
+                            <i class="bi bi-arrow-clockwise me-1"></i>Restart Stream
+                        </button>
+                        <button id="clear-btn" class="btn btn-warning">
+                            <i class="bi bi-trash me-1"></i>Clear Log
+                        </button>
+                    </div>
+
+                    <div id="detection-stats" class="text-center mt-3">
+                        <small class="text-muted">
+                            <span id="detection-count">0</span> vehicles detected |
+                            <span id="transaction-count">0</span> transactions processed |
+                            <span id="fps-counter">0</span> FPS
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-list-check me-2"></i>Detection Log
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div id="status-panel" class="status-panel">
+                        <div class="detection-item detection-info">
+                            <small>System ready. Click 'Start Detection' to begin.</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-4">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-info-circle me-2"></i>Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Detection Rate:</strong> 1 frame every 4 frames</p>
+                    <p><strong>Cooldown Period:</strong> 15 seconds per vehicle</p>
+                    <p><strong>Processing:</strong> Automatic fee deduction</p>
+                    <p><strong>Vehicle Types:</strong> 2W (₹50), 4W (₹100), LV (₹200)</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const videoFeed = document.getElementById('video-feed');
+        const videoPlaceholder = document.getElementById('video-placeholder');
+        const startBtn = document.getElementById('start-btn');
+        const stopBtn = document.getElementById('stop-btn');
+        const refreshBtn = document.getElementById('refresh-btn');
+        const clearBtn = document.getElementById('clear-btn');
+        const statusPanel = document.getElementById('status-panel');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const streamStatus = document.getElementById('stream-status');
+        const detectionCount = document.getElementById('detection-count');
+        const transactionCount = document.getElementById('transaction-count');
+        const fpsCounter = document.getElementById('fps-counter');
+
+        let detectionCounter = 0;
+        let transactionCounter = 0;
+        let frameCounter = 0;
+        let fpsInterval = null;
+        let isStreamActive = false;
+        let lastFrameTime = 0;
+
+        const videoFeedUrl = "{% url 'video_feed' %}?t=" + new Date().getTime();
+        videoFeed.src = videoFeedUrl;
+
+        startBtn.addEventListener('click', function() {
+            startStream();
+        });
+
+        stopBtn.addEventListener('click', function() {
+            stopStream();
+        });
+
+        refreshBtn.addEventListener('click', function() {
+            restartStream();
+        });
+
+        clearBtn.addEventListener('click', function() {
+            clearStatusMessages();
+        });
+
+        videoFeed.addEventListener('load', function() {
+            videoPlaceholder.style.display = 'none';
+            videoFeed.style.display = 'block';
+            loadingSpinner.style.display = 'none';
+            updateStreamStatus(true);
+            startFPSCounter();
+        });
+
+        videoFeed.addEventListener('error', function() {
+            handleStreamError('Failed to load video stream');
+        });
+
+        function startStream() {
+            loadingSpinner.style.display = 'block';
+            videoPlaceholder.style.display = 'none';
+            videoFeed.style.display = 'none';
+
+            videoFeed.src = "{% url 'video_feed' %}?t=" + new Date().getTime();
+
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            isStreamActive = true;
+
+            addStatusMessage('Starting video stream...', 'info');
+        }
+
+        function stopStream() {
+            fetch("{% url 'stop_detection' %}", {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCSRFToken(),
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    videoFeed.src = '';
+                    videoPlaceholder.style.display = 'flex';
+                    videoFeed.style.display = 'none';
+                    loadingSpinner.style.display = 'none';
+
+                    startBtn.disabled = false;
+                    stopBtn.disabled = true;
+                    isStreamActive = false;
+                    updateStreamStatus(false);
+
+                    stopFPSCounter();
+                    addStatusMessage('Video stream stopped', 'info');
+                }
+            })
+            .catch(error => {
+                addStatusMessage('Error stopping stream: ' + error, 'error');
+            });
+        }
+
+        function restartStream() {
+            stopStream();
+            setTimeout(function() {
+                startStream();
+            }, 500);
+        }
+
+        function updateStreamStatus(isActive) {
+            if (isActive) {
+                streamStatus.textContent = 'Active';
+                streamStatus.className = 'stream-status status-active';
+            } else {
+                streamStatus.textContent = 'Inactive';
+                streamStatus.className = 'stream-status status-inactive';
+            }
+        }
+
+        function startFPSCounter() {
+            frameCounter = 0;
+            lastFrameTime = Date.now();
+
+            if (fpsInterval) clearInterval(fpsInterval);
+
+            fpsInterval = setInterval(function() {
+                const now = Date.now();
+                const elapsed = (now - lastFrameTime) / 1000;
+                const fps = Math.round(frameCounter / elapsed);
+
+                fpsCounter.textContent = fps;
+
+                frameCounter = 0;
+                lastFrameTime = now;
+            }, 1000);
+
+            videoFeed.addEventListener('load', function() {
+                frameCounter++;
+            });
+        }
+
+        function stopFPSCounter() {
+            if (fpsInterval) {
+                clearInterval(fpsInterval);
+                fpsInterval = null;
+            }
+            fpsCounter.textContent = '0';
+        }
+
+        function handleStreamError(message) {
+            addStatusMessage(message, 'error');
+            loadingSpinner.style.display = 'none';
+            videoPlaceholder.style.display = 'flex';
+            videoFeed.style.display = 'none';
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            updateStreamStatus(false);
+            stopFPSCounter();
+        }
+
+        function addStatusMessage(message, type) {
+            const item = document.createElement('div');
+            item.className = `detection-item detection-${type}`;
+
+            const timestamp = new Date().toLocaleTimeString();
+            item.innerHTML = `
+                <div class="d-flex justify-content-between align-items-start">
+                    <span>${message}</span>
+                    <small class="text-muted ms-2">${timestamp}</small>
+                </div>
+            `;
+
+            statusPanel.prepend(item);
+
+            statusPanel.scrollTop = 0;
+
+            if (statusPanel.children.length > 50) {
+                statusPanel.removeChild(statusPanel.lastChild);
+            }
+        }
+
+        function clearStatusMessages() {
+            statusPanel.innerHTML = '';
+            addStatusMessage('Log cleared. Ready for new detections.', 'info');
+
+            detectionCounter = 0;
+            transactionCounter = 0;
+            detectionCount.textContent = '0';
+            transactionCount.textContent = '0';
+        }
+
+        function getCSRFToken() {
+            return document.querySelector('[name=csrfmiddlewaretoken]').value;
+        }
+
+        setInterval(function() {
+            if (isStreamActive) {
+                fetch("{% url 'get_detected_plates' %}")
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.plates) {
+                        updateDetections(data.plates);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error polling detections:', error);
+                });
+            }
+        }, 2000);
+
+        function updateDetections(plates) {
+            for (const [trackId, plateInfo] of Object.entries(plates)) {
+                detectionCounter++;
+                detectionCount.textContent = detectionCounter;
+
+                const message = `Detected: ${plateInfo.text} (${plateInfo.vehicle_type}) - Confidence: ${(plateInfo.confidence * 100).toFixed(1)}%`;
+                addStatusMessage(message, 'info');
+
+                if (plateInfo.text && plateInfo.vehicle_type) {
+                    setTimeout(() => {
+                        transactionCounter++;
+                        transactionCount.textContent = transactionCounter;
+                        addStatusMessage(
+                            `${plateInfo.text} (${plateInfo.vehicle_type}): Transaction processed. Fee deducted.`,
+                            'success'
+                        );
+                    }, 1000);
+                }
+            }
+        }
+
+        window.addEventListener('beforeunload', function() {
+            if (isStreamActive) {
+                navigator.sendBeacon("{% url 'stop_detection' %}");
+            }
+        });
+
+        // Initialize
+        updateStreamStatus(false);
+    });
+</script>
+{% endblock %}

@@ -1,11 +1,12 @@
-from .config import *
+from config import *
 
-def validate_plate_text(text):
-    if all(c in ALLOWED_ENG_CHAR for c in text):
+def validate(results, lang):
+    if lang == 'en':
         return validate_english(results)
-    else:
+    elif lang == 'ne':
         return validate_nepali(results)
-
+    else:
+        return None
 
 
 def validate_english(results):

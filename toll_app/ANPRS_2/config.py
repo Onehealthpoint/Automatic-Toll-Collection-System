@@ -1,39 +1,21 @@
-from pathlib import Path
-import os
+from ultralytics import YOLO
+from easyocr import Reader
+import torch
 
-RATES = {
-    "bike": 30,
-    "car": 50,
-    "large": 100,
-}
+OD_FILENAME = "models/od/best.pt"
 
-ROOT = Path(__file__).resolve().parent
-ANPRS = Path(str(ROOT / "toll_app" / "ANPRS"))
+OCR_FOLDER = "models/ocr/"
 
-UPLOAD_PATH = str(ROOT / "media" / "uploads")
-PROCESSED_FOLDER = str(ROOT / "media" / "processed")
-IMAGE_SAVE_PATH = str(ROOT / "media" / "annotated")
+NEP_FONT_PATH = "fonts/Aakriti.ttf"
+ENG_FONT_PATH = "fonts/FE.TTF"
 
-os.makedirs(UPLOAD_PATH, exist_ok=True)
-os.makedirs(PROCESSED_FOLDER, exist_ok=True)
+UPLOAD_FOLDER = "static/uploads/"
+PROCESSED_FOLDER = "static/processed/"
 
-VEHICLE_DETECTOR_PATH =  str(ANPRS / "models" / "od" / "yolov8n.pt")
-PLATE_DETECTOR_PATH =  str(ANPRS / "models" / "od" / "best.pt")
-OD_THRESHOLD = 0.6
-
-OCR_PATH = str(ANPRS / "models" / "ocr/")
-OCR_LANGUAGE = ["en", "ne"]
-OCR_THRESHOLD = 0.4
-
-DEBOUNCE_SECONDS = 15
-SKIP_FRAMES = 9
-
-TRACK_MAX_SIZE = 10
-TRACK_MAX_AGE = 10
-TRACK_MIN_HITS = 3
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'mp4', 'avi', 'mov', 'mkv'}
+ALLOWED_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
 NEP_ALPHA_CHAR_LIST = [
-    'अ', 'आ', 'इ', 'ई', 'उ', 'ऊ', 'ऋ', 'ए', 'ऐ', 'ओ', 'औ',
     'क', 'का', 'कि', 'की', 'कु', 'कू', 'के', 'कै', 'को', 'कौ',
     'ख', 'खा', 'खि', 'खी', 'खु', 'खू', 'खे', 'खै', 'खो', 'खौ',
     'ग', 'गा', 'गि', 'गी', 'गु', 'गू', 'गे', 'गै', 'गो', 'गौ',
@@ -70,18 +52,65 @@ NEP_ALPHA_CHAR_LIST = [
     'त्र', 'त्रा', 'त्रि', 'त्री', 'त्रु', 'त्रू', 'त्रे', 'त्रै', 'त्रो', 'त्रौ',
     'ज्ञ', 'ज्ञा', 'ज्ञि', 'ज्ञी', 'ज्ञु', 'ज्ञू', 'ज्ञे', 'ज्ञै', 'ज्ञो', 'ज्ञौ', '-'
 ]
-NEP_DIGIT_CHAR_LIST= ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९']
+NEP_DIGIT_CHAR_LIST = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९']
 
 ALLOWED_ENG_CHAR = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 ALLOWED_NEP_CHAR = f"{''.join(NEP_ALPHA_CHAR_LIST)}{''.join(NEP_DIGIT_CHAR_LIST)}"
-ALLOWED_ALL_CHAR = f"{ALLOWED_ENG_CHAR}{ALLOWED_NEP_CHAR}"
 
-READ_TEXT_CONFIG = {
-    'allowlist': ALLOWED_ALL_CHAR,
-    'batch_size': 1,
-    'decoder': 'greedy',
-    'detail': 1,
-    'low_text': 0.4,
-    'link_threshold': 0.4,
-    'workers': 0,
+OD_THRESHOLD = 0.7
+OCR_THRESHOLD = 0.5
+IOU_THRESHOLD = 0.3
+VIDEO_OCR_THRESHOLD = 0.3
+
+TRACK_MAX_SIZE = 10
+TRACK_MAX_AGE = 10
+TRACK_MIN_HITS = 3
+
+
+HAS_CUDA = torch.cuda.is_available()
+
+if HAS_CUDA:
+    read_text_config = {
+        'detail': 1,
+        'paragraph': False,
+        'low_text': 0.4,
+        'link_threshold': 0.4,
+        'add_margin': 0.1,
+        'decoder': 'beamsearch',
+        'beamWidth': 10,
+        'workers': 0
+    }
+else:
+    read_text_config = {
+        'detail': 1,
+        'paragraph': False,
+        'low_text': 0.4,
+        'link_threshold': 0.4,
+        'add_margin': 0.1,
+        'decoder': 'greedy',
+        'beamWidth': 1,
+        'workers': 0    
+    }
+
+reader_config = {
+    'model_storage_directory': OCR_FOLDER,
+    'user_network_directory': OCR_FOLDER,
+    'download_enabled': True,
+    'quantize': True,
 }
+
+en_read_text_config = {
+    **read_text_config,
+    'allowlist':ALLOWED_ENG_CHAR
+}
+
+ne_read_text_config = {
+    **read_text_config,
+    'allowlist':ALLOWED_NEP_CHAR
+}
+
+model = YOLO(OD_FILENAME)
+
+# reader = Reader(['en', 'ne'], **reader_config)
+en_reader = Reader(['en'], **reader_config)
+ne_reader = Reader(['ne'], **reader_config)

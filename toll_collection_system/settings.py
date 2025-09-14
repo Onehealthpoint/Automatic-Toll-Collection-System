@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'channels',
     'toll_app',
     'crispy_forms',
     'crispy_bootstrap5',
@@ -76,10 +77,17 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'toll_collection_system.wsgi.application'
+ASGI_APPLICATION = 'toll_collection_system.asgi.application'
 
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',  # Use 'channels_redis.core.RedisChannelLayer' for production
+    },
+}
 
 DATABASES = {
     'default': {
@@ -88,6 +96,9 @@ DATABASES = {
     }
 }
 
+# Media settings for storing detected images
+# MEDIA_URL = '/media/'
+# MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators

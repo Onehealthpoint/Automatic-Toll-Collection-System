@@ -6,7 +6,6 @@ import numpy as np
 def preprocess_image(image):
     if not isinstance(image, np.ndarray):
         image = np.array(image)
-
     height, width = image.shape[:2]
     plate_img = cv2.resize(image, (width * 2, height * 2))
     gray = cv2.cvtColor(plate_img, cv2.COLOR_BGR2GRAY)

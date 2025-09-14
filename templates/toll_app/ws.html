@@ -1,0 +1,496 @@
+{% extends 'toll_app/base.html' %}
+
+{% block title %}Live Detection - Toll Collection System{% endblock %}
+
+{% block extra_css %}
+<style>
+    #video-container {
+        position: relative;
+        max-width: 100%;
+        margin: 0 auto;
+        background: #000;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    #video-feed {
+        width: 100%;
+        display: block;
+    }
+    .controls {
+        margin: 20px 0;
+        text-align: center;
+    }
+    .status-panel {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        margin-top: 20px;
+        max-height: 400px;
+        overflow-y: auto;
+        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+        font-size: 0.9em;
+    }
+    .log-item {
+        padding: 8px;
+        border-bottom: 1px solid #dee2e6;
+        margin-bottom: 5px;
+        border-radius: 4px;
+    }
+    .log-success {
+        background-color: #d4edda;
+        color: #155724;
+        border-left: 4px solid #28a745;
+    }
+    .log-warning {
+        background-color: #fff3cd;
+        color: #856404;
+        border-left: 4px solid #ffc107;
+    }
+    .log-error {
+        background-color: #f8d7da;
+        color: #721c24;
+        border-left: 4px solid #dc3545;
+    }
+    .log-info {
+        background-color: #d1ecf1;
+        color: #0c5460;
+        border-left: 4px solid #17a2b8;
+    }
+    .log-detection {
+        background-color: #e2e3e5;
+        color: #383d41;
+        border-left: 4px solid #6c757d;
+    }
+    #connection-status {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        width: 15px;
+        height: 15px;
+        border-radius: 50%;
+        border: 2px solid white;
+        box-shadow: 0 0 5px rgba(0,0,0,0.3);
+    }
+    .status-connected {
+        background-color: #28a745;
+    }
+    .status-disconnected {
+        background-color: #dc3545;
+    }
+    .status-processing {
+        background-color: #ffc107;
+    }
+    #stats-panel {
+        background: #e9ecef;
+        border-radius: 8px;
+        padding: 15px;
+        margin-top: 20px;
+    }
+    .stat-item {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+    }
+    .stat-value {
+        font-weight: bold;
+    }
+    .card-footer {
+        background: #f8f9fa;
+        border-top: 1px solid #dee2e6;
+    }
+    .performance-stats {
+        font-size: 0.85em;
+        color: #6c757d;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4">
+                <i class="bi bi-lightning-charge me-2"></i>Real-time Vehicle Detection (WebSocket)
+            </h2>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-camera-video me-2"></i>Live Video Feed
+                    </h5>
+                    <div id="connection-status" class="status-disconnected"></div>
+                </div>
+                <div class="card-body">
+                    <div id="video-container">
+                        <img id="video-feed" src="" alt="Live video feed">
+                    </div>
+
+                    <div class="controls">
+                        <button id="start-btn" class="btn btn-success me-2">
+                            <i class="bi bi-play-circle me-1"></i>Start Detection
+                        </button>
+                        <button id="stop-btn" class="btn btn-danger me-2" disabled>
+                            <i class="bi bi-stop-circle me-1"></i>Stop Detection
+                        </button>
+                        <button id="clear-btn" class="btn btn-warning me-2">
+                            <i class="bi bi-trash me-1"></i>Clear Log
+                        </button>
+                        <button id="status-btn" class="btn btn-info">
+                            <i class="bi bi-info-circle me-1"></i>Status
+                        </button>
+                    </div>
+
+                    <div id="stats-panel">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="stat-item">
+                                    <span>Frames Processed:</span>
+                                    <span id="frame-count" class="stat-value">0</span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="stat-item">
+                                    <span>Vehicles Detected:</span>
+                                    <span id="detection-count" class="stat-value">0</span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="stat-item">
+                                    <span>Transactions:</span>
+                                    <span id="transaction-count" class="stat-value">0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer performance-stats">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <span>Connection: </span>
+                            <span id="connection-state">Disconnected</span>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <span>Last update: </span>
+                            <span id="last-update">Never</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-list-check me-2"></i>Detection Log
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div id="log-panel" class="status-panel">
+                        <div class="log-item log-info">
+                            <small>System ready. Connect to start real-time detection.</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-4">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-gear me-2"></i>Detection Settings
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Processing Rate</label>
+                        <select id="frame-rate" class="form-select">
+                            <option value="4">1 frame every 4 frames (Balanced)</option>
+                            <option value="2">1 frame every 2 frames (Faster)</option>
+                            <option value="1">Every frame (Maximum accuracy)</option>
+                            <option value="8">1 frame every 8 frames (Performance)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Confidence Threshold</label>
+                        <input type="range" class="form-range" id="confidence-threshold" min="0.1" max="0.9" step="0.1" value="0.5">
+                        <small class="text-muted">Current: <span id="threshold-value">0.5</span></small>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="auto-process" checked>
+                        <label class="form-check-label" for="auto-process">Auto-process transactions</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-info-circle me-2"></i>System Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Technology:</strong> WebSocket + Django Channels</p>
+                    <p><strong>Processing:</strong> Real-time frame analysis</p>
+                    <p><strong>Detection:</strong> YOLO + EasyOCR</p>
+                    <p><strong>Vehicle Types:</strong> 2W (₹50), 4W (₹100), LV (₹200)</p>
+                    <p><strong>Cooldown:</strong> 15 seconds per vehicle</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const videoFeed = document.getElementById('video-feed');
+        const startBtn = document.getElementById('start-btn');
+        const stopBtn = document.getElementById('stop-btn');
+        const clearBtn = document.getElementById('clear-btn');
+        const statusBtn = document.getElementById('status-btn');
+        const logPanel = document.getElementById('log-panel');
+        const connectionStatus = document.getElementById('connection-status');
+        const connectionState = document.getElementById('connection-state');
+        const lastUpdate = document.getElementById('last-update');
+
+        const frameCount = document.getElementById('frame-count');
+        const detectionCount = document.getElementById('detection-count');
+        const transactionCount = document.getElementById('transaction-count');
+
+        const frameRateSelect = document.getElementById('frame-rate');
+        const confidenceThreshold = document.getElementById('confidence-threshold');
+        const thresholdValue = document.getElementById('threshold-value');
+        const autoProcess = document.getElementById('auto-process');
+
+        let websocket = null;
+        let frameCounter = 0;
+        let detectionCounter = 0;
+        let transactionCounter = 0;
+        let isConnected = false;
+        let isProcessing = false;
+
+        // Update threshold value display
+        confidenceThreshold.addEventListener('input', function() {
+            thresholdValue.textContent = this.value;
+        });
+
+        startBtn.addEventListener('click', function() {
+            connectWebSocket();
+        });
+
+        stopBtn.addEventListener('click', function() {
+            disconnectWebSocket();
+        });
+
+        clearBtn.addEventListener('click', function() {
+            clearLog();
+        });
+
+        statusBtn.addEventListener('click', function() {
+            if (websocket && isConnected) {
+                websocket.send(JSON.stringify({
+                    type: 'control',
+                    action: 'status'
+                }));
+            } else {
+                addLog('Not connected to server', 'warning');
+            }
+        });
+
+        function connectWebSocket() {
+            const wsScheme = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${wsScheme}//${window.location.host}/ws/live-detection/`;
+
+            try {
+                websocket = new WebSocket(wsUrl);
+                updateConnectionState('connecting', 'Connecting...');
+
+                websocket.onopen = function() {
+                    updateConnectionState('connected', 'Connected');
+                    addLog('WebSocket connection established', 'success');
+                    startBtn.disabled = true;
+                    stopBtn.disabled = false;
+
+                    // Send initial configuration
+                    websocket.send(JSON.stringify({
+                        type: 'config',
+                        frame_rate: parseInt(frameRateSelect.value),
+                        confidence_threshold: parseFloat(confidenceThreshold.value),
+                        auto_process: autoProcess.checked
+                    }));
+                };
+
+                websocket.onmessage = function(event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        updateLastUpdate();
+
+                        switch(data.type) {
+                            case 'frame':
+                                videoFeed.src = 'data:image/jpeg;base64,' + data.image;
+                                frameCounter++;
+                                frameCount.textContent = frameCounter;
+                                break;
+
+                            case 'status':
+                                addLog(data.message, 'info');
+                                break;
+
+                            case 'detection':
+                                detectionCounter++;
+                                detectionCount.textContent = detectionCounter;
+                                addLog(`${data.plate_text} (${data.vehicle_type}) detected - Confidence: ${(data.confidence * 100).toFixed(1)}%`, 'detection');
+                                break;
+
+                            case 'transaction':
+                                transactionCounter++;
+                                transactionCount.textContent = transactionCounter;
+                                addLog(data.message, 'success');
+                                break;
+
+                            case 'warning':
+                                addLog(data.message, 'warning');
+                                break;
+
+                            case 'error':
+                                addLog(data.message, 'error');
+                                break;
+
+                            default:
+                                console.log('Unknown message type:', data);
+                        }
+                    } catch (error) {
+                        console.error('Error parsing message:', error);
+                        addLog('Error processing server message', 'error');
+                    }
+                };
+
+                websocket.onclose = function(event) {
+                    updateConnectionState('disconnected', 'Disconnected');
+                    addLog(`Connection closed: ${event.code} ${event.reason || ''}`, 'info');
+                    resetControls();
+                };
+
+                websocket.onerror = function(error) {
+                    updateConnectionState('error', 'Connection Error');
+                    addLog('WebSocket error occurred', 'error');
+                    console.error('WebSocket error:', error);
+                    resetControls();
+                };
+
+            } catch (error) {
+                addLog('Failed to create WebSocket connection: ' + error, 'error');
+                resetControls();
+            }
+        }
+
+        function disconnectWebSocket() {
+            if (websocket) {
+                websocket.send(JSON.stringify({
+                    type: 'control',
+                    action: 'stop'
+                }));
+                websocket.close();
+            }
+            resetControls();
+            addLog('Detection stopped', 'info');
+        }
+
+        function resetControls() {
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            videoFeed.src = '';
+            isConnected = false;
+            isProcessing = false;
+        }
+
+        function updateConnectionState(state, message) {
+            connectionStatus.className = 'status-' + state;
+            connectionState.textContent = message;
+            isConnected = state === 'connected';
+        }
+
+        function updateLastUpdate() {
+            const now = new Date();
+            lastUpdate.textContent = now.toLocaleTimeString();
+        }
+
+        function addLog(message, type) {
+            const logItem = document.createElement('div');
+            logItem.className = `log-item log-${type}`;
+
+            const timestamp = new Date().toLocaleTimeString();
+            logItem.innerHTML = `
+                <div class="d-flex justify-content-between align-items-start">
+                    <span>${message}</span>
+                    <small class="text-muted ms-2">${timestamp}</small>
+                </div>
+            `;
+
+            logPanel.prepend(logItem);
+
+            // Auto-scroll to top and limit messages
+            logPanel.scrollTop = 0;
+            if (logPanel.children.length > 100) {
+                logPanel.removeChild(logPanel.lastChild);
+            }
+        }
+
+        function clearLog() {
+            logPanel.innerHTML = '';
+            addLog('Log cleared', 'info');
+
+            // Reset counters but keep totals
+            frameCounter = 0;
+            detectionCounter = 0;
+            transactionCounter = 0;
+            frameCount.textContent = '0';
+            detectionCount.textContent = '0';
+            transactionCount.textContent = '0';
+        }
+
+        // Configuration changes
+        frameRateSelect.addEventListener('change', function() {
+            if (websocket && isConnected) {
+                websocket.send(JSON.stringify({
+                    type: 'config',
+                    frame_rate: parseInt(this.value)
+                }));
+            }
+        });
+
+        confidenceThreshold.addEventListener('change', function() {
+            if (websocket && isConnected) {
+                websocket.send(JSON.stringify({
+                    type: 'config',
+                    confidence_threshold: parseFloat(this.value)
+                }));
+            }
+        });
+
+        autoProcess.addEventListener('change', function() {
+            if (websocket && isConnected) {
+                websocket.send(JSON.stringify({
+                    type: 'config',
+                    auto_process: this.checked
+                }));
+            }
+        });
+
+        // Handle page unload
+        window.addEventListener('beforeunload', function() {
+            if (websocket) {
+                websocket.close();
+            }
+        });
+
+        // Initial connection state
+        updateConnectionState('disconnected', 'Disconnected');
+    });
+</script>
+{% endblock %}

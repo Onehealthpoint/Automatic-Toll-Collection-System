@@ -27,3 +27,11 @@ class VehicleRate(Enum):
             return cls.LARGE.value
         else:
             return 0.0
+
+
+VEHICLE_TYPE_MAPPING = {
+    2: "Car",       # car
+    3: "Bike",      # motorcycle
+    5: "Large",     # bus
+    7: "Large",     # truck
+}

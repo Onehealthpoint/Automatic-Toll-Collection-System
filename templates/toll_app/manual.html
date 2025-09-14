@@ -1,67 +1,40 @@
-<!-- templates/toll_app/manual_entry.html -->
-{% extends 'toll_app/base.html' %}
-{% load crispy_forms_tags %}
-
-{% block title %}Manual Entry - Vehicle Management System{% endblock %}
-
-{% block content %}
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-lg-6">
-            <div class="card shadow">
-                <div class="card-header bg-info text-white">
-                    <h3 class="card-title mb-0 py-2">
-                        <i class="bi bi-pencil-square me-2"></i>Manual Transaction Entry
-                    </h3>
-                </div>
-                <div class="card-body p-4">
-                    <form method="post">
-                        {% csrf_token %}
-
-                        {{ form.vehicle_number|as_crispy_field }}
-                        {{ form.timestamp|as_crispy_field }}
-
-                        <div class="d-grid gap-2 mt-4">
-                            <button type="submit" class="btn btn-primary btn-lg">
-                                <i class="bi bi-check-circle me-2"></i>Record Transaction
-                            </button>
-                        </div>
-                    </form>
-                </div>
+<!-- toll_app/templates/toll_app/manual_entry.html -->
+<form id="manualEntryForm" method="post">
+    {% csrf_token %}
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label class="form-label">Select User</label>
+                <select name="user_id" class="form-select" required>
+                    <option value="">Select a user</option>
+                    {% for user in user_list %}
+                        <option value="{{ user.id }}">{{ user.first_name }} {{ user.last_name }} - {{ user.vehicle_number }} ({{ user.vehicle_type }})</option>
+                    {% endfor %}
+                </select>
             </div>
-
-            <!-- Fee Information -->
-            <div class="card mt-4">
-                <div class="card-header bg-secondary text-white">
-                    <h5 class="card-title mb-0">
-                        <i class="bi bi-currency-rupee me-2"></i>Current Fee Structure
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-6">
-                            <strong>Vehicle Type</strong>
-                        </div>
-                        <div class="col-6 text-end">
-                            <strong>Fee</strong>
-                        </div>
-                    </div>
-                    <hr>
-                    <div class="row">
-                        <div class="col-6">Bike</div>
-                        <div class="col-6 text-end">NRP {{ rate_info.bike_rate }}</div>
-                    </div>
-                    <div class="row">
-                        <div class="col-6">Car</div>
-                        <div class="col-6 text-end">NRP {{ rate_info.car_rate }}</div>
-                    </div>
-                    <div class="row">
-                        <div class="col-6">Large Vehicle (Jeep, Bus, Truck)</div>
-                        <div class="col-6 text-end">NRP {{ rate_info.large_rate }}</div>
-                    </div>
-                </div>
+        </div>
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label class="form-label">Timestamp</label>
+                <input type="datetime-local" name="timestamp" class="form-control" required>
             </div>
         </div>
     </div>
-</div>
-{% endblock %}
+    
+    <div class="mb-3">
+        <label class="form-label">Vehicle Type</label>
+        <select name="vehicle_type" class="form-select" required>
+            <option value="">Select vehicle type</option>
+            <option value="2W">Two Wheeler (Bike) - NRP {{ rate_info.bike_rate }}</option>
+            <option value="4W">Four Wheeler (Car) - NRP {{ rate_info.car_rate }}</option>
+            <option value="LV">Large Vehicle (Large) - NRP {{ rate_info.large_rate }}</option>
+        </select>
+    </div>
+    
+    <div class="d-grid">
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-circle me-2"></i>Record Transaction
+        </button>
+    </div>
+</form>

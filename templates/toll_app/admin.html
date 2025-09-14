@@ -1,10 +1,502 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Welcome</title>
-</head>
-<body>
+{% extends 'toll_app/base.html' %}
+{% load crispy_forms_tags %}
 
-</body>
-</html>
+{% block title %}Admin Dashboard - Toll Collection System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        border-radius: 15px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s;
+    }
+    .stat-card:hover {
+        transform: translateY(-2px);
+    }
+    .vehicle-count {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    .revenue {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+    }
+    .users {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: white;
+    }
+    .transactions {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        color: white;
+    }
+    .filter-bar {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    .notification-toast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        min-width: 300px;
+    }
+    .chart-container {
+        height: 300px;
+        position: relative;
+    }
+    .recent-transactions {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    .badge-Bike { background-color: #28a745; }
+    .badge-Car { background-color: #007bff; }
+    .badge-Large { background-color: #6f42c1; }
+    .entry-forms {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        height: fit-content;
+        position: sticky;
+        top: 20px;
+    }
+    .form-section {
+        margin-bottom: 25px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid #dee2e6;
+    }
+    .form-section:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="bi bi-speedometer2 me-2"></i>Admin Dashboard</h2>
+                <span class="badge bg-primary fs-6">Welcome, {{ user.first_name }} {{ user.last_name }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row">
+        <!-- Vehicle Count -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stat-card vehicle-count">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title">Vehicles Passed</h6>
+                            <h2 class="mb-0">{{ vehicle_passed.total }}</h2>
+                        </div>
+                        <i class="bi bi-truck display-4 opacity-50"></i>
+                    </div>
+                    <div class="mt-3">
+                        <span class="badge bg-light text-dark me-2">Bike: {{ vehicle_passed.bike }}</span>
+                        <span class="badge bg-light text-dark me-2">Car: {{ vehicle_passed.car }}</span>
+                        <span class="badge bg-light text-dark">Large: {{ vehicle_passed.large }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Revenue -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stat-card revenue">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title">Total Revenue</h6>
+                            <h2 class="mb-0">NRP {{ revenue.total }}</h2>
+                        </div>
+                        <i class="bi bi-currency-rupee display-4 opacity-50"></i>
+                    </div>
+                    <div class="mt-3">
+                        <span class="badge bg-light text-dark me-2">Bike: NRP {{ revenue.bike }}</span>
+                        <span class="badge bg-light text-dark me-2">Car: NRP {{ revenue.car }}</span>
+                        <span class="badge bg-light text-dark">Large: NRP {{ revenue.large }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Users -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stat-card users">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title">Registered Users</h6>
+                            <h2 class="mb-0">{{ user_list.count }}</h2>
+                        </div>
+                        <i class="bi bi-people display-4 opacity-50"></i>
+                    </div>
+                    <div class="mt-3">
+                        <span class="badge bg-light text-dark">Active Today: {{ vehicle_passed.total }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transactions -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stat-card transactions">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title">Total Transactions</h6>
+                            <h2 class="mb-0">{{ vehicle_passed.total }}</h2>
+                        </div>
+                        <i class="bi bi-receipt display-4 opacity-50"></i>
+                    </div>
+                    <div class="mt-3">
+                        <span class="badge bg-light text-dark">Avg: NRP {{ revenue.total|floatformat:2 }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="row">
+        <div class="col-xl-6 col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h6 class="card-title mb-0"><i class="bi bi-pie-chart me-2"></i>Vehicle Distribution</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="vehicleChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-6 col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h6 class="card-title mb-0"><i class="bi bi-bar-chart me-2"></i>Revenue Distribution</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="revenueChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="row">
+        <!-- Left Column - History and Filters -->
+        <div class="col-lg-8">
+            <!-- Filters -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="card-title mb-0"><i class="bi bi-funnel me-2"></i>History Filters</h6>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Date Range</label>
+                            <select name="date" class="form-select">
+                                <option value="today" {% if current_date_filter == 'today' %}selected{% endif %}>Today</option>
+                                <option value="week" {% if current_date_filter == 'week' %}selected{% endif %}>Last 7 Days</option>
+                                <option value="month" {% if current_date_filter == 'month' %}selected{% endif %}>Last 30 Days</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Vehicle Type</label>
+                            <select name="vehicle_type" class="form-select">
+                                {% for value, name in vehicle_types %}
+                                    <option value="{{ value }}" {% if current_vehicle_filter == value %}selected{% endif %}>{{ name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">User</label>
+                            <select name="user_id" class="form-select">
+                                <option value="all">All Users</option>
+                                {% for user in user_list %}
+                                    <option value="{{ user.id }}" {% if current_user_filter == user.id %}selected{% endif %}>
+                                        {{ user.first_name }} {{ user.last_name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-filter me-2"></i>Apply Filters
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Recent Transactions -->
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h6 class="card-title mb-0"><i class="bi bi-clock-history me-2"></i>Recent Transactions</h6>
+                </div>
+                <div class="card-body">
+                    <div class="recent-transactions">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Vehicle</th>
+                                    <th>Type</th>
+                                    <th>User</th>
+                                    <th>Fee</th>
+                                    <th>Balance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for txn in recent_transactions %}
+                                <tr>
+                                    <td>{{ txn.timestamp|time }}</td>
+                                    <td>{{ txn.user.vehicle_number }}</td>
+                                    <td><span class="badge badge-{{ txn.vehicle_type }}">{{ txn.vehicle_type }}</span></td>
+                                    <td>{{ txn.user.first_name }} {{ txn.user.last_name }}</td>
+                                    <td>NRP {{ txn.fee }}</td>
+                                    <td>NRP {{ txn.remaining_balance }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center">No transactions found</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column - Entry Forms -->
+        <div class="col-lg-4">
+            <div class="entry-forms">
+                <!-- Manual Entry Form -->
+                <div class="form-section">
+                    <h5 class="mb-3"><i class="bi bi-pencil-square me-2"></i>Manual Entry</h5>
+                    <form id="manualEntryForm" method="post" action="{% url 'manual_entry' %}">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label">Select User</label>
+                            <select name="user_id" class="form-select" required>
+                                <option value="">Select a user</option>
+                                {% for user in user_list %}
+                                    <option value="{{ user.id }}">{{ user.first_name }} {{ user.last_name }} - {{ user.vehicle_number }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Vehicle Type</label>
+                            <select name="vehicle_type" class="form-select" required>
+                                <option value="">Select vehicle type</option>
+                                <option value="Bike">Two Wheeler (Bike) - NRP {{ rate_info.bike_rate }}</option>
+                                <option value="Car">Four Wheeler (Car) - NRP {{ rate_info.car_rate }}</option>
+                                <option value="Large">Large Vehicle (Large) - NRP {{ rate_info.large_rate }}</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Timestamp</label>
+                            <input type="datetime-local" name="timestamp" class="form-control" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-check-circle me-2"></i>Record Transaction
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Video Entry Form -->
+                <div class="form-section">
+                    <h5 class="mb-3"><i class="bi bi-camera-video me-2"></i>Video Entry</h5>
+                    <form id="videoEntryForm" method="post" action="{% url 'video_entry' %}" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label">Upload Video/Image</label>
+                            <input type="file" name="video_file" class="form-control" accept="video/*,image/*" required>
+                            <div class="form-text">Supported formats: MP4, AVI, MOV, JPEG, PNG</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Processing Mode</label>
+                            <select name="processing_mode" class="form-select">
+                                <option value="fast">Fast Processing</option>
+                                <option value="accurate">Accurate Processing</option>
+                                <option value="detailed">Detailed Analysis</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="bi bi-play-fill me-2"></i>Process Video
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="form-section">
+                    <h5 class="mb-3"><i class="bi bi-lightning me-2"></i>Quick Actions</h5>
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-primary" onclick="exportHistory()">
+                            <i class="bi bi-download me-2"></i>Export History
+                        </button>
+                        <button class="btn btn-outline-info" onclick="refreshData()">
+                            <i class="bi bi-arrow-clockwise me-2"></i>Refresh Data
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Notification Toast -->
+<div class="toast notification-toast" role="alert" data-bs-autohide="true" data-bs-delay="5000">
+    <div class="toast-header">
+        <strong class="me-auto">System Notification</strong>
+        <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+    </div>
+    <div class="toast-body" id="toastMessage">
+        <!-- Notification message will appear here -->
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize charts
+        const vehicleCtx = document.getElementById('vehicleChart').getContext('2d');
+        new Chart(vehicleCtx, {
+            type: 'pie',
+            data: {
+                labels: ['Two Wheelers (Bike)', 'Four Wheelers (Car)', 'Large Vehicles (Large)'],
+                datasets: [{
+                    data: [{{ vehicle_passed.bike }}, {{ vehicle_passed.car }}, {{ vehicle_passed.large }}],
+                    backgroundColor: ['#28a745', '#007bff', '#6f42c1']
+                }]
+            }
+        });
+
+        const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+        new Chart(revenueCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Two Wheelers', 'Four Wheelers', 'Large Vehicles'],
+                datasets: [{
+                    label: 'Revenue (NRP)',
+                    data: [{{ revenue.bike }}, {{ revenue.car }}, {{ revenue.large }}],
+                    backgroundColor: ['#28a745', '#007bff', '#6f42c1']
+                }]
+            }
+        });
+
+        // Form submissions
+        const manualForm = document.getElementById('manualEntryForm');
+        if (manualForm) {
+            manualForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                submitForm(this, "{% url 'manual_entry' %}");
+            });
+        }
+
+        const videoForm = document.getElementById('videoEntryForm');
+        if (videoForm) {
+            videoForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                submitForm(this, "{% url 'video_entry' %}");
+            });
+        }
+    });
+
+    function submitForm(form, url) {
+        const formData = new FormData(form);
+
+        fetch(url, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification(data.message, 'success');
+                form.reset();
+                // Refresh page after 2 seconds to update statistics
+                setTimeout(() => location.reload(), 2000);
+            } else {
+                                showNotification(data.error || 'Error processing request', 'error');
+            }
+        })
+        .catch(error => {
+            showNotification('Error: ' + error, 'error');
+        });
+    }
+
+    function showNotification(message, type = 'info') {
+        const toast = new bootstrap.Toast(document.querySelector('.notification-toast'));
+        const toastBody = document.getElementById('toastMessage');
+
+        toastBody.innerHTML = message;
+        toastBody.className = 'toast-body';
+
+        switch(type) {
+            case 'success':
+                toastBody.classList.add('text-success');
+                break;
+            case 'error':
+                toastBody.classList.add('text-danger');
+                break;
+            case 'warning':
+                toastBody.classList.add('text-warning');
+                break;
+        }
+
+        toast.show();
+    }
+
+    function exportHistory() {
+        showNotification('Export feature coming soon!', 'info');
+    }
+
+    function refreshData() {
+        location.reload();
+    }
+
+    // Handle video processing results display
+    function displayVideoResults(results) {
+        const resultsContainer = document.getElementById('detectionResults');
+        resultsContainer.innerHTML = '';
+
+        results.forEach(result => {
+            const badgeClass = result.status === 'success' ? 'bg-success' :
+                             result.status === 'warning' ? 'bg-warning' : 'bg-danger';
+
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'alert alert-' + (result.status === 'success' ? 'success' :
+                                 result.status === 'warning' ? 'warning' : 'danger');
+            resultDiv.innerHTML = `
+                <div class="d-flex justify-content-between">
+                    <strong>${result.plate}</strong>
+                    <span class="badge ${badgeClass}">${result.vehicle_type}</span>
+                </div>
+                <div>${result.message}</div>
+            `;
+            resultsContainer.appendChild(resultDiv);
+        });
+
+        showNotification('Video processing completed!', 'success');
+    }
+</script>
+{% endblock %}
