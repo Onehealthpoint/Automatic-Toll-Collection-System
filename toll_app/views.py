@@ -1,4 +1,4 @@
-from .ANPRS2.detect import generate_frames_sort, process_image, get_realtime_plates, clear_realtime_plates
+from .ANPRS_2.detect import generate_frames_sort, process_image, get_realtime_plates, clear_realtime_plates
 from toll_app.forms import SignupForm, LoginForm, ManualEntryForm, forms
 from django.http import StreamingHttpResponse, JsonResponse
 from django.contrib.auth import login, authenticate, logout
