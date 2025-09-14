@@ -13,7 +13,7 @@ UPLOAD_PATH = str(ROOT / "storage" / "uploads")
 IMAGE_SAVE_PATH = str(ROOT / "storage" / "annotated")
 DB_BACKUP_CSV_PATH = str(ROOT / "storage" / "logs")
 
-VEHICLE_DETECTOR_PATH =  str(ANPRS / "models" / "od" / "coco.pt")
+VEHICLE_DETECTOR_PATH =  str(ANPRS / "models" / "od" / "yolov8n.pt")
 PLATE_DETECTOR_PATH =  str(ANPRS / "models" / "od" / "best.pt")
 OD_THRESHOLD = 0.6
 

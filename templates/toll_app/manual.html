@@ -1,10 +1,67 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Manual</title>
-</head>
-<body>
+<!-- templates/toll_app/manual_entry.html -->
+{% extends 'toll_app/base.html' %}
+{% load crispy_forms_tags %}
 
-</body>
-</html>
+{% block title %}Manual Entry - Vehicle Management System{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card shadow">
+                <div class="card-header bg-info text-white">
+                    <h3 class="card-title mb-0 py-2">
+                        <i class="bi bi-pencil-square me-2"></i>Manual Transaction Entry
+                    </h3>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        {{ form.vehicle_number|as_crispy_field }}
+                        {{ form.timestamp|as_crispy_field }}
+
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-check-circle me-2"></i>Record Transaction
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Fee Information -->
+            <div class="card mt-4">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-currency-rupee me-2"></i>Current Fee Structure
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <strong>Vehicle Type</strong>
+                        </div>
+                        <div class="col-6 text-end">
+                            <strong>Fee</strong>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row">
+                        <div class="col-6">Bike</div>
+                        <div class="col-6 text-end">NRP {{ rate_info.bike_rate }}</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-6">Car</div>
+                        <div class="col-6 text-end">NRP {{ rate_info.car_rate }}</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-6">Large Vehicle (Jeep, Bus, Truck)</div>
+                        <div class="col-6 text-end">NRP {{ rate_info.large_rate }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

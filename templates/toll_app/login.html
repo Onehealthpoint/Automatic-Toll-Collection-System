@@ -1,10 +1,47 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Login</title>
-</head>
-<body>
+{% extends 'toll_app/base.html' %}
+{% load crispy_forms_tags %}
 
-</body>
-</html>
+{% block title %}Login - Toll Collection System{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="card-title mb-0 py-2">
+                        <i class="bi bi-box-arrow-in-right me-2"></i>Login to Your Account
+                    </h3>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        {{ form.username|as_crispy_field }}
+                        {{ form.password|as_crispy_field }}
+
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                {{ form.non_field_errors }}
+                            </div>
+                        {% endif %}
+
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-box-arrow-in-right me-2"></i>Login
+                            </button>
+                        </div>
+
+                        <div class="text-center mt-3">
+                            <p>Don't have an account?
+                                <a href="{% url 'signup' %}" class="text-decoration-none">Sign up here</a>
+                            </p>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

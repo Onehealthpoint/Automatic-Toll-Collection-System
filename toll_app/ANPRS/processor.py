@@ -44,16 +44,6 @@ def process_image(image_file):
                 x1, y1, x2, y2 = map(int, box.xyxy[0])
                 plate_img = img.crop((x1, y1, x2, y2))
                 text, text_conf = process_plate(plate_img)
-                plate = Plate(
-                    plate_bbox=(x1, y1, x2, y2),
-                    plate_conf=float(box.conf),
-                    plate_color=get_plate_color(plate_img),
-                    text=text,
-                    text_conf=text_conf,
-                    source=Source.IMAGE,
-                    original_image_path=filename,
-                    result_image_path=None)
-                recognized_plates.append(plate)
                 plates.append({'text': text, 'confidence': text_conf})
 
     processed_filename = f"processed_{filename}"
@@ -63,19 +53,15 @@ def process_image(image_file):
     for plate in recognized_plates:
         processed_img = draw_text(processed_img, plate.text, plate.text_conf, plate.lang, plate.plate_bbox)
         plate.recognized_plates = processed_filename
-        plate.save_to_db()
 
     if not isinstance(processed_img, Image.Image):
         Image.fromarray(processed_img).save(processed_filepath)
     else:
         processed_img.save(processed_filepath)
 
-    return render_template(
-        'image_result.html',
-        original_image=filename,
-        processed_image=processed_filename,
-        plates=plates
-    )
+    # should return [(vehicle type, vehicle number, processed_image_path)]
+    return None
+
 
 
 def generate_frames_sort():
@@ -158,7 +144,7 @@ def process_plate(plate_img):
     else:
         text, confidence = validated_nep_results, nep_conf
 
-    return text, confidence
+    return vehicle_type, text, confidence
 
 
 def process_frame(frame):
@@ -176,15 +162,6 @@ def process_frame(frame):
                 plate_img = frame[y1:y2, x1:x2]
 
                 text, text_conf = process_plate(plate_img)
-
-                plate = {
-                    'coordinates': (x1, y1, x2, y2),
-                    'confidence': float(box.conf),
-                    'plate_color': get_plate_color(plate_img),
-                    'text': text,
-                    'text_confidence': text_conf,
-                    'language': 'ne' if any(char in config.ALLOWED_NEP_CHAR for char in text) else 'en'
-                }
 
                 recognized_plates.append(plate)
 

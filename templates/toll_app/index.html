@@ -1,10 +1,50 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Index</title>
-</head>
-<body>
+{% extends 'toll_app/base.html' %}
 
-</body>
-</html>
+{% block content %}
+<div class="hero-section">
+    <div class="container text-center">
+        <h1 class="display-4 fw-bold">Toll Collection System</h1>
+        <p class="lead">Manage your vehicle details and balance with ease</p>
+        <div class="mt-4">
+            <a class="btn btn-light btn-lg px-4 me-3" href="{% url 'signup' %}">
+                <i class="bi bi-person-plus me-2"></i>Get Started
+            </a>
+            <a class="btn btn-outline-light btn-lg px-4" href="{% url 'login' %}">
+                <i class="bi bi-box-arrow-in-right me-2"></i>Login
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="container my-5">
+    <div class="row text-center">
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 border-0">
+                <div class="card-body">
+                    <i class="bi bi-truck display-4 text-primary mb-3"></i>
+                    <h3>Vehicle Management</h3>
+                    <p>Easily manage your vehicle details and information in one place.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 border-0">
+                <div class="card-body">
+                    <i class="bi bi-wallet2 display-4 text-primary mb-3"></i>
+                    <h3>Balance Tracking</h3>
+                    <p>Keep track of your account balance and transaction history.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 border-0">
+                <div class="card-body">
+                    <i class="bi bi-shield-check display-4 text-primary mb-3"></i>
+                    <h3>Secure Access</h3>
+                    <p>Your data is protected with secure authentication and encryption.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
