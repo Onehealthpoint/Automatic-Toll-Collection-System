@@ -43,19 +43,16 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <div class="navbar-nav ms-auto">
                     {% if user.is_authenticated %}
-{#                        <span class="navbar-text fw-lighter fst-italic me-4">Welcome, {{ user.username }}</span>#}
+                        {% if user.is_superuser %}
+                            <a class="nav-link" href="{% url 'live_detection' %}">
+                                <i class="bi bi-speedometer2 me-1"></i>Live Detection
+                            </a>
+                        {% endif %}
                         <a class="nav-link" href="{% url 'dashboard' %}">
                             <i class="bi bi-speedometer2 me-1"></i>Dashboard
                         </a>
                         <a class="nav-link" href="{% url 'logout' %}">
                             <i class="bi bi-box-arrow-right me-1"></i>Logout
-                        </a>
-                    {% else %}
-                        <a class="nav-link" href="{% url 'login' %}">
-                            <i class="bi bi-box-arrow-in-right me-1"></i>Login
-                        </a>
-                        <a class="nav-link" href="{% url 'signup' %}">
-                            <i class="bi bi-person-plus me-1"></i>Sign Up
                         </a>
                     {% endif %}
                 </div>

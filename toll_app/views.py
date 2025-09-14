@@ -59,15 +59,17 @@ def logout_view(request):
 def dashboard(request):
     if request.user.is_superuser:
         return redirect('admin_dashboard')
-    return render(request, 'toll_app/user.html', {'user': request.user})
+    txn = Transactions.objects.filter(user=request.user).order_by('-timestamp')[:10]
+    return render(request, 'toll_app/user.html', {'user': request.user, 'transactions': txn})
 
 
 @login_required
-def recharge_account(request, amount):
+def recharge_account(request):
     if not request.user.is_authenticated:
         return JsonResponse({'error': 'Unauthorized'}, status=401)
 
     try:
+        amount = request.GET.get('amount', '0')
         amount = Decimal(amount)
         if amount <= 0:
             return JsonResponse({'error': 'Invalid amount'}, status=400)
@@ -90,22 +92,7 @@ def admin_dashboard(request):
     if not request.user.is_superuser:
         return redirect('dashboard')
 
-    date_filter = request.GET.get('date', 'today')
-    vehicle_type_filter = request.GET.get('vehicle_type', 'all')
-
     txn = Transactions.objects.all()
-
-    if date_filter == 'today':
-        txn = txn.filter(timestamp__date=datetime.date.today())
-    elif date_filter == 'week':
-        start_date = datetime.date.today() - datetime.timedelta(days=7)
-        txn = txn.filter(timestamp__date__gte=start_date)
-    elif date_filter == 'month':
-        start_date = datetime.date.today() - datetime.timedelta(days=30)
-        txn = txn.filter(timestamp__date__gte=start_date)
-
-    if vehicle_type_filter != 'all':
-        txn = txn.filter(vehicle_type=vehicle_type_filter)
 
     vehicle_passed_total = {
         'bike': txn.filter(vehicle_type=VehicleType.BIKE.value).count(),
@@ -124,18 +111,17 @@ def admin_dashboard(request):
     recent_transactions = txn.order_by('-timestamp')[:10]
 
     user_list = UserDetails.objects.filter(is_superuser=False).all()
-
-    form = ManualEntryForm()
+    active_today = user_list.filter(
+        transactions__timestamp__date=datetime.date.today()
+    ).distinct().count()
 
     context = {
-        'form': form,
         'user_list': user_list,
+        'active_today': active_today,
         'vehicle_passed': vehicle_passed_total,
         'revenue': total_revenue,
         'recent_transactions': recent_transactions,
-        'current_date_filter': date_filter,
-        'current_vehicle_filter': vehicle_type_filter,
-        'vehicle_types': [('all', 'All Vehicles')] + [(vt.value, vt.name) for vt in VehicleType],
+        'vehicle_types': [('all', 'All Vehicles')] + [(vt.value, vt.name) for vt in VehicleType]
     }
 
     return render(request, 'toll_app/admin.html', context)
@@ -146,20 +132,20 @@ def history(request):
     if not request.user.is_superuser:
         return JsonResponse({'error': 'Unauthorized'}, status=403)
 
-    user_id = request.GET.get('user_id')
-    vehicle_type = request.GET.get('vehicle_type')
+    user_id = request.GET.get('user_id', 'all')
+    vehicle_type = request.GET.get('vehicle_type', 'all')
     days = int(request.GET.get('days', 7))
 
     end_date = datetime.date.today()
     start_date = end_date - datetime.timedelta(days=days)
 
-    txn = Transactions.objects.filter(timestamp__date__range=[start_date, end_date])
+    txn = Transactions.objects.filter(timestamp__date__range=[start_date, end_date]).all()
 
     if user_id and user_id != 'all':
-        txn = txn.filter(user__id=user_id)
+        txn = txn.filter(user__id=user_id).all()
 
     if vehicle_type and vehicle_type != 'all':
-        txn = txn.filter(vehicle_type=vehicle_type)
+        txn = txn.filter(vehicle_type=vehicle_type).all()
 
     history_data = []
     for transaction in txn.order_by('-timestamp'):
@@ -232,72 +218,29 @@ def manual_entry(request):
 
 
 @login_required
-def video_entry_results(request):
+def process_video(request):
     if not request.user.is_superuser:
         return JsonResponse({'error': 'Unauthorized'}, status=403)
 
-    if request.method == 'POST':
+    if request.method == 'POST' and request.FILES.get('video'):
         try:
-            detected_plates = request.POST.getlist('plates[]')
-            results = []
+            video_file = request.FILES['video']
 
-            for plate_data in detected_plates:
-                plate_info = plate_data.split(',')
-                if len(plate_info) >= 2:
-                    plate_number = plate_info[0].strip().upper()
-                    vehicle_type = plate_info[1].strip()
-                    confidence = float(plate_info[2]) if len(plate_info) > 2 else 0.0
-
-                    try:
-                        user = UserDetails.objects.get(vehicle_number=plate_number)
-                        fee = VehicleRate.get_rate(vehicle_type)
-
-                        if user.balance >= fee:
-                            transaction = Transactions(
-                                user=user,
-                                vehicle_type=vehicle_type,
-                                fee=fee,
-                                remaining_balance=user.balance - fee,
-                                image_path=f"video_detected_{plate_number}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
-                            )
-
-                            user.balance -= fee
-                            user.save()
-                            transaction.save()
-
-                            results.append({
-                                'plate': plate_number,
-                                'status': 'success',
-                                'message': f'NRP {fee} deducted from {user.first_name}\'s account',
-                                'remaining_balance': float(user.balance)
-                            })
-                        else:
-                            results.append({
-                                'plate': plate_number,
-                                'status': 'warning',
-                                'message': f'Insufficient balance: NRP {user.balance} (Required: NRP {fee})'
-                            })
-                    except UserDetails.DoesNotExist:
-                        results.append({
-                            'plate': plate_number,
-                            'status': 'error',
-                            'message': 'Vehicle not registered in system'
-                        })
+            results = process_video_sort(video_file)
 
             return JsonResponse({
                 'success': True,
                 'results': results,
-                'timestamp': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                'message': 'Video processing completed successfully'
             })
 
         except Exception as e:
             return JsonResponse({
                 'success': False,
-                'error': str(e)
+                'error': f'Error processing video: {str(e)}'
             }, status=500)
 
-    return JsonResponse({'error': 'Invalid request method'}, status=400)
-
+    return JsonResponse({'error': 'No video file provided'}, status=400)
 
 @login_required
 def live_detect(request):

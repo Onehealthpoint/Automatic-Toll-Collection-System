@@ -50,9 +50,6 @@
         max-height: 400px;
         overflow-y: auto;
     }
-    .badge-Bike { background-color: #28a745; }
-    .badge-Car { background-color: #007bff; }
-    .badge-Large { background-color: #6f42c1; }
     .entry-forms {
         background: #f8f9fa;
         border-radius: 10px;
@@ -61,6 +58,9 @@
         position: sticky;
         top: 20px;
     }
+    .badge-Bike { background-color: #28a745; }
+    .badge-Car { background-color: #007bff; }
+    .badge-Large { background-color: #6f42c1; }
     .form-section {
         margin-bottom: 25px;
         padding-bottom: 20px;
@@ -81,7 +81,7 @@
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2><i class="bi bi-speedometer2 me-2"></i>Admin Dashboard</h2>
-                <span class="badge bg-primary fs-6">Welcome, {{ user.first_name }} {{ user.last_name }}</span>
+                <span class="badge bg-primary fs-4">Welcome, {{ user.first_name }} {{ user.last_name }}</span>
             </div>
         </div>
     </div>
@@ -140,7 +140,7 @@
                         <i class="bi bi-people display-4 opacity-50"></i>
                     </div>
                     <div class="mt-3">
-                        <span class="badge bg-light text-dark">Active Today: {{ vehicle_passed.total }}</span>
+                        <span class="badge bg-light text-dark">Active Today: {{ active_today }}</span>
                     </div>
                 </div>
             </div>
@@ -204,7 +204,7 @@
                     <h6 class="card-title mb-0"><i class="bi bi-funnel me-2"></i>History Filters</h6>
                 </div>
                 <div class="card-body">
-                    <form method="get" class="row g-3">
+                    <div class="row g-3">
                         <div class="col-md-3">
                             <label class="form-label">Date Range</label>
                             <select name="date" class="form-select">
@@ -233,11 +233,11 @@
                             </select>
                         </div>
                         <div class="col-md-3 d-flex align-items-end">
-                            <button type="submit" class="btn btn-primary w-100">
+                            <button class="btn btn-primary w-100" onclick="loadHistoryData()">
                                 <i class="bi bi-filter me-2"></i>Apply Filters
                             </button>
                         </div>
-                    </form>
+                    </div>
                 </div>
             </div>
 
@@ -259,7 +259,7 @@
                                     <th>Balance</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="transactions-tbody">
                                 {% for txn in recent_transactions %}
                                 <tr>
                                     <td>{{ txn.timestamp|time }}</td>
@@ -291,20 +291,11 @@
                         {% csrf_token %}
                         <div class="mb-3">
                             <label class="form-label">Select User</label>
-                            <select name="user_id" class="form-select" required>
+                            <select name="vehicle_number" class="form-select" required>
                                 <option value="">Select a user</option>
                                 {% for user in user_list %}
-                                    <option value="{{ user.id }}">{{ user.first_name }} {{ user.last_name }} - {{ user.vehicle_number }}</option>
+                                    <option value="{{ user.vehicle_number }}">{{ user.first_name }} {{ user.last_name }} - {{ user.vehicle_number }}</option>
                                 {% endfor %}
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Vehicle Type</label>
-                            <select name="vehicle_type" class="form-select" required>
-                                <option value="">Select vehicle type</option>
-                                <option value="Bike">Two Wheeler (Bike) - NRP {{ rate_info.bike_rate }}</option>
-                                <option value="Car">Four Wheeler (Car) - NRP {{ rate_info.car_rate }}</option>
-                                <option value="Large">Large Vehicle (Large) - NRP {{ rate_info.large_rate }}</option>
                             </select>
                         </div>
                         <div class="mb-3">
@@ -374,7 +365,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Initialize charts
         const vehicleCtx = document.getElementById('vehicleChart').getContext('2d');
         new Chart(vehicleCtx, {
             type: 'pie',
@@ -400,7 +390,8 @@
             }
         });
 
-        // Form submissions
+        loadHistoryData();
+
         const manualForm = document.getElementById('manualEntryForm');
         if (manualForm) {
             manualForm.addEventListener('submit', function(e) {
@@ -416,7 +407,68 @@
                 submitForm(this, "{% url 'video_entry' %}");
             });
         }
+
+        const filterForm = document.querySelector('form[method="get"]');
+        if (filterForm) {
+            filterForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                loadHistoryData();
+            });
+        }
     });
+
+    function loadHistoryData() {
+        const dateFilter = document.querySelector('select[name="date"]').value;
+        const vehicleTypeFilter = document.querySelector('select[name="vehicle_type"]').value;
+        const userIdFilter = document.querySelector('select[name="user_id"]').value;
+
+        const transactionsTable = document.getElementById('transactions-tbody');
+
+        const params = new URLSearchParams();
+        if (dateFilter) params.append('date', dateFilter);
+        if (vehicleTypeFilter && vehicleTypeFilter !== 'all') params.append('vehicle_type', vehicleTypeFilter);
+        if (userIdFilter && userIdFilter !== 'all') params.append('user_id', userIdFilter);
+
+        fetch(`{% url 'api_history' %}?${params.toString()}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.history && data.history.length > 0) {
+                    updateHistoryTable(data.history);
+                    showNotification(`Loaded ${data.count} transactions from ${data.period}`, 'success');
+                } else {
+                    transactionsTable.innerHTML = '<tr><td colspan="6" class="text-center">No transactions found</td></tr>';
+                    showNotification('No transactions found for the selected filters', 'info');
+                }
+            })
+            .catch(error => {
+                console.error('Error loading history:', error);
+                transactionsTable.innerHTML = '<tr><td colspan="6" class="text-center">Error loading history</td></tr>';
+                showNotification('Error loading history data', 'error');
+            });
+    }
+
+    function updateHistoryTable(historyData) {
+        const tbody = document.querySelector('#transactions-tbody');
+        tbody.innerHTML = '';
+
+        historyData.forEach(transaction => {
+            const row = document.createElement('tr');
+
+            const timestamp = new Date(transaction.timestamp);
+            const timeString = timestamp.toLocaleTimeString();
+
+            row.innerHTML = `
+                <td>${timeString}</td>
+                <td>${transaction.vehicle_number}</td>
+                <td><span class="badge badge-${transaction.vehicle_type}">${transaction.vehicle_type}</span></td>
+                <td>${transaction.user}</td>
+                <td>NRP ${transaction.fee}</td>
+                <td>NRP ${transaction.remaining_balance}</td>
+            `;
+
+            tbody.appendChild(row);
+        });
+    }
 
     function submitForm(form, url) {
         const formData = new FormData(form);
@@ -433,10 +485,10 @@
             if (data.success) {
                 showNotification(data.message, 'success');
                 form.reset();
-                // Refresh page after 2 seconds to update statistics
+                loadHistoryData();
                 setTimeout(() => location.reload(), 2000);
             } else {
-                                showNotification(data.error || 'Error processing request', 'error');
+                showNotification(data.error || 'Error processing request', 'error');
             }
         })
         .catch(error => {
@@ -467,14 +519,25 @@
     }
 
     function exportHistory() {
-        showNotification('Export feature coming soon!', 'info');
+        const dateFilter = document.querySelector('select[name="date"]').value;
+        const vehicleTypeFilter = document.querySelector('select[name="vehicle_type"]').value;
+        const userIdFilter = document.querySelector('select[name="user_id"]').value;
+
+        const params = new URLSearchParams();
+        if (dateFilter) params.append('date', dateFilter);
+        if (vehicleTypeFilter && vehicleTypeFilter !== 'all') params.append('vehicle_type', vehicleTypeFilter);
+        if (userIdFilter && userIdFilter !== 'all') params.append('user_id', userIdFilter);
+        params.append('export', 'true');
+
+        window.open(`{% url 'api_history' %}?${params.toString()}`, '_blank');
+        showNotification('Exporting history data...', 'info');
     }
 
     function refreshData() {
-        location.reload();
+        loadHistoryData();
+        showNotification('Data refreshed', 'success');
     }
 
-    // Handle video processing results display
     function displayVideoResults(results) {
         const resultsContainer = document.getElementById('detectionResults');
         resultsContainer.innerHTML = '';
@@ -497,6 +560,8 @@
         });
 
         showNotification('Video processing completed!', 'success');
+
+        setTimeout(loadHistoryData, 1000);
     }
 </script>
 {% endblock %}

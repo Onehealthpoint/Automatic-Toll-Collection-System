@@ -14,10 +14,10 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),
 
     # User functionalities
-    # path('api/recharge/<Decimal:amount>', views.recharge_account, name='api_recharge'),
+    path('api/recharge/', views.recharge_account, name='api_recharge'),
     path('api/history/', views.history, name='api_history'),
     path('manual-entry/', views.manual_entry, name='manual_entry'),
-    path('api/video-entry/', views.video_entry_results, name='api_video_entry'),
+    path('video-entry/', views.process_video, name='video_entry'),
 
     # Live detection URLs
     path('live-detection/', views.live_detect, name='live_detection'),

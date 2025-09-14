@@ -1,4 +1,4 @@
-from config import *
+from .config import *
 
 def validate(results, lang):
     if lang == 'en':
