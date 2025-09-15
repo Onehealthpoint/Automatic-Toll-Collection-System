@@ -1,4 +1,5 @@
-from .ANPRS_2.detect import generate_frames_sort, process_image, get_realtime_plates, clear_realtime_plates
+import uuid
+from .ANPRS_2.detect import generate_frames_sort, process_image, get_realtime_plates, clear_realtime_plates, stop_live_detection
 from toll_app.forms import SignupForm, LoginForm, ManualEntryForm, forms
 from django.http import StreamingHttpResponse, JsonResponse
 from django.contrib.auth import login, authenticate, logout
@@ -8,10 +9,12 @@ from .models import UserDetails, Transactions
 from .enums import VehicleRate, VehicleType
 from django.views.decorators import gzip
 from django.contrib import messages
-from django.db import models
+from django.db import models, transaction as db_transaction
 from decimal import Decimal
 import datetime
 
+
+live_plate_db_flag = {}
 
 def index(request):
     return render(request, 'toll_app/index.html')
@@ -112,8 +115,8 @@ def admin_dashboard(request):
 
     user_list = UserDetails.objects.filter(is_superuser=False).all()
     active_today = user_list.filter(
-        transactions__timestamp__date=datetime.date.today()
-    ).distinct().count()
+        last_login__date=datetime.date.today()
+    ).count()
 
     context = {
         'user_list': user_list,
@@ -262,6 +265,15 @@ def video_feed(request):
 def get_detected_plates(request):
     try:
         plates = get_realtime_plates()
+
+        # for plate in plates:
+        #     if plate['text'] not in live_plate_db_flag:
+        #         if save_transactions(plate):
+        #             live_plate_db_flag[plate['text']] = datetime.datetime.now()
+        #     else:
+        #         if (datetime.datetime.now() - live_plate_db_flag[plate['text']]).seconds > 60:
+        #             if save_transactions(plate):
+        #                 live_plate_db_flag[plate['text']] = datetime.datetime.now()
         return JsonResponse({'plates': plates, 'success': True})
     except Exception as e:
         return JsonResponse({'error': str(e), 'success': False}, status=500)
@@ -272,10 +284,20 @@ def process_single_frame(request):
         try:
             image_file = request.FILES['image']
             result = process_image(image_file)
-            return JsonResponse({'result': result, 'success': True})
+            return JsonResponse({
+                'success': True,
+                'results': results,
+                'error': 'Successfully processed image'
+            }, status=200)
         except Exception as e:
-            return JsonResponse({'error': str(e), 'success': False}, status=500)
-    return JsonResponse({'error': 'No image provided', 'success': False}, status=400)
+            return JsonResponse({
+                'success': False,
+                'error': f'Error processing image: {str(e)}'
+            }, status=500)
+    return JsonResponse({
+        'success': False,
+        'error': f'Error processing image'
+    }, status=500)
 
 @login_required
 def start_detection(request):
@@ -289,6 +311,7 @@ def start_detection(request):
 def stop_detection(request):
     try:
         clear_realtime_plates()
+        stop_live_detection()
         return JsonResponse({'success': True, 'message': 'Detection stopped'})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
@@ -297,3 +320,5 @@ def stop_detection(request):
 @login_required
 def ws_live_detect(request):
     return render(request, 'toll_app/ws.html')
+
+

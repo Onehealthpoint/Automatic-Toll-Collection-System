@@ -1,24 +1,33 @@
 import os
 import cv2
+import uuid
 import datetime
 import collections
 import numpy as np
+from django.core.mail import send_mail
+from django.core.files.storage import default_storage
 from .sort import Sort
 from PIL import Image
+from decimal import Decimal
 from django.apps import apps
 from collections import deque
+from django.conf import settings
+from django.utils import timezone
+from django.db import transaction as db_transaction
 
 from .utlis import *
 from .helper import *
 from .config import *
 from .intermediate import *
 from .validator import validate_nepali, validate_english
+from ..models import Transactions, UserDetails
+from ..enums import VehicleType, VehicleRate
 
-TollAppConfig = apps.get_app_config('toll_app')
-plate_model = TollAppConfig.get_plate_model()
-coco_model = TollAppConfig.get_coco_model()
-easyocr_reader = TollAppConfig.get_easyocr_reader()
-device = TollAppConfig.get_device()
+# TollAppConfig = apps.get_app_config('toll_app')
+# plate_model = TollAppConfig.get_plate_model()
+# coco_model = TollAppConfig.get_coco_model()
+# easyocr_reader = TollAppConfig.get_easyocr_reader()
+# device = TollAppConfig.get_device()
 
 tracker = Sort(max_age=TRACK_MAX_AGE, min_hits=TRACK_MIN_HITS)
 track_texts = {}
@@ -30,6 +39,8 @@ realtime_recognized_plates = {}
 last_detection_times = {}
 DEBOUNCE_SECONDS = 30
 
+EXIT_LIVE = False
+
 
 def detect_vehicle_type(plate_text):
     user = UserDetails.objects.filter(vehicle_number=plate_text).first()
@@ -37,16 +48,15 @@ def detect_vehicle_type(plate_text):
         return user.vehicle_type
     return 'unknown'
 
+
 def should_process_plate(plate_text):
     global last_detection_times
 
     current_time = timezone.now()
 
-    clean_plate = clean_plate_text(plate_text)
-    if not clean_plate:
-        return False
+    clean_plate = plate_text.strip().upper()
 
-    if clean_plate in last_detection_times:
+    if clean_plate in last_detection_times.keys():
         last_time = last_detection_times[clean_plate]
         time_diff = (current_time - last_time).total_seconds()
         if time_diff < DEBOUNCE_SECONDS:
@@ -55,32 +65,55 @@ def should_process_plate(plate_text):
     last_detection_times[clean_plate] = current_time
     return True
 
+
+@db_transaction.atomic
 def process_transaction(plate_text, vehicle_type, image_path):
     if not should_process_plate(plate_text):
         return None, "Plate processed recently (debounce active)"
 
     try:
-        user = UserDetails.objects.filter(vehicle_number=plate_text).first()
+        user = UserDetails.objects.select_for_update().filter(vehicle_number=plate_text).first()
 
         if not user:
             return None, "Vehicle not registered in system"
 
-        fee = VehicleRate.get_rate(vehicle_type)
+        if vehicle_type == VehicleType.BIKE.value:
+            fee = VehicleRate.BIKE.value
+        elif vehicle_type == VehicleType.CAR.value:
+            fee = VehicleRate.CAR.value
+        elif vehicle_type == VehicleType.LARGE.value:
+            fee = VehicleRate.LARGE.value
+        else:
+            return None, f"Unknown vehicle type: {vehicle_type}"
 
         if user.balance < fee:
             return None, f"Insufficient balance: NRP {user.balance} (Required: NRP {fee})"
 
         transaction = Transactions(
+            id=uuid.uuid4(),
             user=user,
             vehicle_type=vehicle_type,
-            fee=fee,
-            remaining_balance=user.balance - fee,
-            image_path=image_path
+            fee=Decimal(fee),
+            remaining_balance=user.balance - Decimal(fee),
+            image_path=image_path,
+            timestamp=timezone.now()
         )
 
-        user.balance -= fee
+        user.balance -= Decimal(fee)
         user.save()
         transaction.save()
+
+        try:
+            send_mail(
+                subject="Toll Payment Notification",
+                message=f"Dear {user.first_name},\n\nA toll fee of NRP {fee} has been deducted from your account for vehicle number {plate_text}.\n\nRemaining Balance: NRP {user.balance}\n\nThank you for using our service.\n\nBest regards,\nToll Management System",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=['r9nbgso1rz@jxpomup.com'],
+                fail_silently=True
+            )
+            print(f"Email sent to {user.email}")
+        except Exception as email_error:
+            print(f"Failed to send email: {email_error}")
 
         return transaction, f"NRP {fee} deducted from {user.first_name}'s account"
 
@@ -252,8 +285,9 @@ def process_video_sort(video_file):
 
     return video_results
 
+
 def process_image(image_file):
-    filename = default_storage.save(f"uploads/{image_file.name}", image_file)
+    filename = default_storage.save(f"media/uploads/{image_file.name}", image_file)
     filepath = default_storage.path(filename)
 
     img = Image.open(filepath)
@@ -310,7 +344,7 @@ def process_image(image_file):
                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
 
     processed_filename = f"processed_{os.path.basename(filename)}"
-    processed_path = os.path.join(settings.MEDIA_ROOT, 'processed', processed_filename)
+    processed_path = os.path.join(settings.MEDIA_ROOT, 'media/processed', processed_filename)
     os.makedirs(os.path.dirname(processed_path), exist_ok=True)
     cv2.imwrite(processed_path, processed_img)
 
@@ -318,9 +352,11 @@ def process_image(image_file):
 
 
 def generate_frames_sort():
-    global realtime_recognized_plates
+    global realtime_recognized_plates, EXIT_LIVE
 
-    cap = cv2.VideoCapture(0)
+    EXIT_LIVE = False
+
+    cap = cv2.VideoCapture(1)
     if not cap.isOpened():
         yield None
         return
@@ -329,12 +365,12 @@ def generate_frames_sort():
     track_texts = {}
     frame_count = 0
 
-    while True:
+    while not EXIT_LIVE:
         success, frame = cap.read()
         if not success:
             break
 
-        if frame_count % 4 == 0:
+        if frame_count % 1 == 0:
             od_results = model(frame)
             detections = []
 
@@ -356,6 +392,9 @@ def generate_frames_sort():
 
                 if track_id not in track_texts or frame_count % 10 == 0:
                     text, confidence = process_plate(plate_img)
+                    if confidence < OD_THRESHOLD or (
+                            track_id in track_texts and confidence <= track_texts[track_id]['confidence']):
+                        continue
                     if text:
                         vehicle_type = detect_vehicle_type(text)
 
@@ -376,9 +415,7 @@ def generate_frames_sort():
                     info = track_texts[track_id]
                     color = (0, 255, 0) if info['transaction_status'] == 'success' else (0, 0, 255)
                     cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
-
-                    status_text = "✓" if info['transaction_status'] == 'success' else "✗"
-                    label = f"ID:{track_id} {info['text']} {status_text}"
+                    label = f"ID:{track_id} {info['text']}"
                     cv2.putText(frame, label, (x1, y1 - 10),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
 
@@ -401,6 +438,7 @@ def generate_frames_sort():
         frame_count += 1
 
     cap.release()
+
 
 def process_plate(plate_img):
     plate_img = np.array(plate_img)
@@ -425,6 +463,7 @@ def process_plate(plate_img):
         text, confidence = validated_nep_results, nep_conf
 
     return text, confidence
+
 
 def process_frame(frame):
     if isinstance(frame, Image.Image):
@@ -455,9 +494,16 @@ def process_frame(frame):
 
     return frame, recognized_plates
 
+
 def get_realtime_plates():
     return realtime_recognized_plates.copy()
+
 
 def clear_realtime_plates():
     global realtime_recognized_plates
     realtime_recognized_plates.clear()
+
+
+def stop_live_detection():
+    global EXIT_LIVE
+    EXIT_LIVE = True

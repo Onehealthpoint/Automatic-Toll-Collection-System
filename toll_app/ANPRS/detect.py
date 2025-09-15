@@ -16,7 +16,8 @@ from .validator import validate_plate_text
 from ..models import UserDetails
 from ..enums import VEHICLE_TYPE_MAPPING
 
-TollAppConfig = apps.get_app_config('toll_app')
+# TollAppConfig = apps.get_app_config('toll_app')
+TollAppConfig = object()
 plate_model = TollAppConfig.get_plate_model()
 coco_model = TollAppConfig.get_coco_model()
 easyocr_reader = TollAppConfig.get_easyocr_reader()

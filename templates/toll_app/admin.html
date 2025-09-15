@@ -310,24 +310,16 @@
 
                 <!-- Video Entry Form -->
                 <div class="form-section">
-                    <h5 class="mb-3"><i class="bi bi-camera-video me-2"></i>Video Entry</h5>
-                    <form id="videoEntryForm" method="post" action="{% url 'video_entry' %}" enctype="multipart/form-data">
+                    <h5 class="mb-3"><i class="bi bi-camera-video me-2"></i>Image Entry</h5>
+                    <form id="videoEntryForm" method="post" action="{% url 'process_single_frame' %}" enctype="multipart/form-data">
                         {% csrf_token %}
                         <div class="mb-3">
-                            <label class="form-label">Upload Video/Image</label>
-                            <input type="file" name="video_file" class="form-control" accept="video/*,image/*" required>
-                            <div class="form-text">Supported formats: MP4, AVI, MOV, JPEG, PNG</div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Processing Mode</label>
-                            <select name="processing_mode" class="form-select">
-                                <option value="fast">Fast Processing</option>
-                                <option value="accurate">Accurate Processing</option>
-                                <option value="detailed">Detailed Analysis</option>
-                            </select>
+                            <label class="form-label">Upload Image</label>
+                            <input type="file" name="image" class="form-control" accept="image/*" required>
+                            <div class="form-text">Supported formats: JPEG, PNG</div>
                         </div>
                         <button type="submit" class="btn btn-success w-100">
-                            <i class="bi bi-play-fill me-2"></i>Process Video
+                            <i class="bi bi-play-fill me-2"></i>Process Image
                         </button>
                     </form>
                 </div>
@@ -404,7 +396,7 @@
         if (videoForm) {
             videoForm.addEventListener('submit', function(e) {
                 e.preventDefault();
-                submitForm(this, "{% url 'video_entry' %}");
+                submitForm(this, "{% url 'process_single_frame' %}");
             });
         }
 
@@ -559,7 +551,7 @@
             resultsContainer.appendChild(resultDiv);
         });
 
-        showNotification('Video processing completed!', 'success');
+        showNotification('Image processing completed!', 'success');
 
         setTimeout(loadHistoryData, 1000);
     }

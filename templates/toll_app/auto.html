@@ -172,7 +172,7 @@
                     <p><strong>Detection Rate:</strong> 1 frame every 4 frames</p>
                     <p><strong>Cooldown Period:</strong> 15 seconds per vehicle</p>
                     <p><strong>Processing:</strong> Automatic fee deduction</p>
-                    <p><strong>Vehicle Types:</strong> 2W (₹50), 4W (₹100), LV (₹200)</p>
+                    <p><strong>Vehicle Types:</strong> 2W (NRP 30), 4W (NRP 50), Large (NRP 100)</p>
                 </div>
             </div>
         </div>
@@ -204,14 +204,15 @@
         let lastFrameTime = 0;
 
         const videoFeedUrl = "{% url 'video_feed' %}?t=" + new Date().getTime();
-        videoFeed.src = videoFeedUrl;
 
         startBtn.addEventListener('click', function() {
             startStream();
+            videoFeed.src = videoFeedUrl;
         });
 
         stopBtn.addEventListener('click', function() {
             stopStream();
+            videoFeed.src = '';
         });
 
         refreshBtn.addEventListener('click', function() {
@@ -394,15 +395,10 @@
                 const message = `Detected: ${plateInfo.text} (${plateInfo.vehicle_type}) - Confidence: ${(plateInfo.confidence * 100).toFixed(1)}%`;
                 addStatusMessage(message, 'info');
 
-                if (plateInfo.text && plateInfo.vehicle_type) {
-                    setTimeout(() => {
-                        transactionCounter++;
-                        transactionCount.textContent = transactionCounter;
-                        addStatusMessage(
-                            `${plateInfo.text} (${plateInfo.vehicle_type}): Transaction processed. Fee deducted.`,
-                            'success'
-                        );
-                    }, 1000);
+                if (plateInfo.transaction_status === 'success') {
+                    transactionCounter++;
+                    transactionCount.textContent = transactionCounter;
+                    addStatusMessage(`Transaction processed for ${plateInfo.text}`, 'success');
                 }
             }
         }

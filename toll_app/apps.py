@@ -17,7 +17,7 @@ class TollAppConfig(AppConfig):
     def ready(self):
         if not os.environ.get('DJANGO_LOAD_MODELS'):
             os.environ['DJANGO_LOAD_MODELS'] = '1'
-            self.load_models()
+            # self.load_models()
 
     def load_models(self):
         if self.models_loaded:
