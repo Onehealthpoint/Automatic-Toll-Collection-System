@@ -38,7 +38,7 @@ EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'sadik078@academiacollege.edu.np'
-EMAIL_HOST_PASSWORD = 'DotnetProject2025'
+EMAIL_HOST_PASSWORD = 'xaina'
 DEFAULT_FROM_EMAIL = 'sadik078@academiacollege.edu.np'
 
 
