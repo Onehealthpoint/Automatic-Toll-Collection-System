@@ -203,6 +203,8 @@
         let isStreamActive = false;
         let lastFrameTime = 0;
 
+        let plateTexts = new Set();
+
         const videoFeedUrl = "{% url 'video_feed' %}?t=" + new Date().getTime();
 
         startBtn.addEventListener('click', function() {
@@ -246,10 +248,15 @@
             stopBtn.disabled = false;
             isStreamActive = true;
 
+            plateTexts = new Set();
+            clearStatusMessages();
+
             addStatusMessage('Starting video stream...', 'info');
         }
 
         function stopStream() {
+
+
             fetch("{% url 'stop_detection' %}", {
                 method: 'POST',
                 headers: {
@@ -366,6 +373,7 @@
             transactionCounter = 0;
             detectionCount.textContent = '0';
             transactionCount.textContent = '0';
+            plateTexts.clear();
         }
 
         function getCSRFToken() {
@@ -389,6 +397,11 @@
 
         function updateDetections(plates) {
             for (const [trackId, plateInfo] of Object.entries(plates)) {
+                if (plateTexts.has(plateInfo.text)) {
+                    continue;
+                }
+
+                plateTexts.add(plateInfo.text);
                 detectionCounter++;
                 detectionCount.textContent = detectionCounter;
 
@@ -399,6 +412,12 @@
                     transactionCounter++;
                     transactionCount.textContent = transactionCounter;
                     addStatusMessage(`Transaction processed for ${plateInfo.text}`, 'success');
+                }
+                else if (plateInfo.transaction_status === 'error') {
+                    addStatusMessage(plateInfo.transaction_message, 'error');
+                }
+                else {
+                    addStatusMessage(plateInfo.transaction_message, 'warning');
                 }
             }
         }

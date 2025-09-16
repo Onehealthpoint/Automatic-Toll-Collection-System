@@ -86,9 +86,9 @@ else:
         'paragraph': False,
         'low_text': 0.4,
         'link_threshold': 0.4,
-        'add_margin': 0.1,
+        'add_margin': 0.2,
         'decoder': 'greedy',
-        'beamWidth': 1,
+        'beamWidth': 5,
         'workers': 0    
     }
 

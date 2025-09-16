@@ -137,7 +137,14 @@ def history(request):
 
     user_id = request.GET.get('user_id', 'all')
     vehicle_type = request.GET.get('vehicle_type', 'all')
-    days = int(request.GET.get('days', 7))
+    date = request.GET.get('date', 'today')
+
+    if date == 'week':
+        days = 7
+    elif date == 'month':
+        days = 30
+    else:
+        days = 1
 
     end_date = datetime.date.today()
     start_date = end_date - datetime.timedelta(days=days)
@@ -283,20 +290,20 @@ def process_single_frame(request):
     if request.method == 'POST' and request.FILES.get('image'):
         try:
             image_file = request.FILES['image']
-            result = process_image(image_file)
+            _, _, transaction_results = process_image(image_file)
             return JsonResponse({
                 'success': True,
-                'results': results,
-                'error': 'Successfully processed image'
+                'results': transaction_results,
+                'message': f'{transaction_results[0]['plate']}: {transaction_results[0]['message']}'
             }, status=200)
         except Exception as e:
             return JsonResponse({
                 'success': False,
-                'error': f'Error processing image: {str(e)}'
+                'message': f'Error processing image: {str(e)}'
             }, status=500)
     return JsonResponse({
         'success': False,
-        'error': f'Error processing image'
+        'message': f'Error processing image'
     }, status=500)
 
 @login_required

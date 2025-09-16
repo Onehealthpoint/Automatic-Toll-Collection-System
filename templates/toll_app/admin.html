@@ -47,11 +47,11 @@
         position: relative;
     }
     .recent-transactions {
-        max-height: 400px;
+        height: 460px;
         overflow-y: auto;
     }
     .entry-forms {
-        background: #f8f9fa;
+        background: #eeeeee;
         border-radius: 10px;
         padding: 20px;
         height: fit-content;
@@ -308,7 +308,7 @@
                     </form>
                 </div>
 
-                <!-- Video Entry Form -->
+                <!-- Image Entry Form -->
                 <div class="form-section">
                     <h5 class="mb-3"><i class="bi bi-camera-video me-2"></i>Image Entry</h5>
                     <form id="videoEntryForm" method="post" action="{% url 'process_single_frame' %}" enctype="multipart/form-data">
@@ -331,7 +331,7 @@
                         <button class="btn btn-outline-primary" onclick="exportHistory()">
                             <i class="bi bi-download me-2"></i>Export History
                         </button>
-                        <button class="btn btn-outline-info" onclick="refreshData()">
+                        <button class="btn btn-outline-secondary" onclick="refreshData()">
                             <i class="bi bi-arrow-clockwise me-2"></i>Refresh Data
                         </button>
                     </div>
@@ -447,7 +447,10 @@
             const row = document.createElement('tr');
 
             const timestamp = new Date(transaction.timestamp);
-            const timeString = timestamp.toLocaleTimeString();
+            const timeString = timestamp.getDate() + "/" +
+                timestamp.getMonth() + " " +
+                String(timestamp.getHours()).padStart(2, '0') + ":" +
+                String(timestamp.getMinutes()).padStart(2, '0');
 
             row.innerHTML = `
                 <td>${timeString}</td>
@@ -476,9 +479,10 @@
         .then(data => {
             if (data.success) {
                 showNotification(data.message, 'success');
+                console.log(data.message);
                 form.reset();
-                loadHistoryData();
-                setTimeout(() => location.reload(), 2000);
+                setTimeout(loadHistoryData, 2000);
+                {#setTimeout(() => location.reload(), 2000);#}
             } else {
                 showNotification(data.error || 'Error processing request', 'error');
             }

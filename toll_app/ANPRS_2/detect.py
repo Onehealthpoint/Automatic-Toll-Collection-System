@@ -74,6 +74,11 @@ def process_transaction(plate_text, vehicle_type, image_path):
     try:
         user = UserDetails.objects.select_for_update().filter(vehicle_number=plate_text).first()
 
+        # For nepali text if full digits is read, match only digits
+        if not any(c in plate_text[-4:] for c in ALLOWED_ENG_CHAR):
+            user = UserDetails.objects.select_for_update().filter(vehicle_number__contains=plate_text[-4:]).first()
+            vehicle_type = user.vehicle_type
+
         if not user:
             return None, "Vehicle not registered in system"
 
@@ -446,7 +451,8 @@ def process_plate(plate_img):
     if plate_img is None or plate_img.size == 0:
         return None, 0
 
-    processed_plate_img = preprocess_image(plate_img)
+    # processed_plate_img = preprocess_image(plate_img)
+    processed_plate_img = plate_img.copy()
 
     nep_results = ne_reader.readtext(plate_img, **ne_read_text_config)
     eng_results = en_reader.readtext(processed_plate_img, **en_read_text_config)

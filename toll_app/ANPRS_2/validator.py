@@ -35,11 +35,12 @@ def validate_english(results):
             num_part += item
 
     if len(text_part) != 3:
-        text_part = (text_part + "⨉⨉⨉")[:3]
+        text_part = (text_part + "XXX")[:3]
     if len(num_part) != 4:
-        num_part = (num_part + "∎∎∎∎")[:4]
+        num_part = ("0000" + num_part )[-4:]
 
-    return f"{state} {text_part} {num_part}".strip()
+    # return f"{state} {text_part} {num_part}".strip()
+    return f"{text_part} {num_part}".strip()
 
 
 def validate_nepali(results):
@@ -71,14 +72,16 @@ def validate_nepali(results):
     number_plate_pattern = 'new' if len(text_part) < 2 else 'old'
 
     if len(text_part) != 2:
-        text_part = (text_part + "⨉⨉")[:2]
+        text_part = (text_part + "XX")[:2]
     if len(num_part) != 7:
-        num_part = ("∎∎∎∎∎∎∎" + num_part)[-7:]
+        num_part = ("0000000" + num_part)[-7:]
 
     if number_plate_pattern == 'old':
-        return f"{state} {text_part[0]} {num_part[1:3]} {text_part[1]} {num_part[3:]}".strip()
+        # return f"{state} {text_part[0]} {num_part[1:3]} {text_part[1]} {num_part[3:]}".strip()
+        return f"{text_part[0]} {num_part[1:3]} {text_part[1]} {num_part[3:]}".strip()
     else:
-        return f"{state} {num_part[0:3]} {text_part[0]} {num_part[3:]}".strip()
+        # return f"{state} {num_part[0:3]} {text_part[0]} {num_part[3:]}".strip()
+        return f"{num_part[0:3]} {text_part[0]} {num_part[3:]}".strip()
 
 
 def clean_nepali_text(text):

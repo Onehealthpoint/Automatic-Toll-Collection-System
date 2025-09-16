@@ -45,7 +45,7 @@
                     {% if user.is_authenticated %}
                         {% if user.is_superuser %}
                             <a class="nav-link" href="{% url 'live_detection' %}">
-                                <i class="bi bi-speedometer2 me-1"></i>Live Detection
+                                <i class="bi bi-camera-video me-1"></i>Live Detection
                             </a>
                         {% endif %}
                         <a class="nav-link" href="{% url 'dashboard' %}">
