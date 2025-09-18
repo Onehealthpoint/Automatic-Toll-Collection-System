@@ -77,11 +77,11 @@ def process_transaction(plate_text, vehicle_type, image_path):
         # For nepali text if full digits is read, match only digits
         if not any(c in plate_text[-4:] for c in ALLOWED_ENG_CHAR):
             user = UserDetails.objects.select_for_update().filter(vehicle_number__contains=plate_text[-4:]).first()
-            vehicle_type = user.vehicle_type
 
         if not user:
             return None, "Vehicle not registered in system"
 
+        vehicle_type = user.vehicle_type
         if vehicle_type == VehicleType.BIKE.value:
             fee = VehicleRate.BIKE.value
         elif vehicle_type == VehicleType.CAR.value:

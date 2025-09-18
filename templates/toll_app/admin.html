@@ -325,17 +325,17 @@
                 </div>
 
                 <!-- Quick Actions -->
-                <div class="form-section">
-                    <h5 class="mb-3"><i class="bi bi-lightning me-2"></i>Quick Actions</h5>
-                    <div class="d-grid gap-2">
-                        <button class="btn btn-outline-primary" onclick="exportHistory()">
-                            <i class="bi bi-download me-2"></i>Export History
-                        </button>
-                        <button class="btn btn-outline-secondary" onclick="refreshData()">
-                            <i class="bi bi-arrow-clockwise me-2"></i>Refresh Data
-                        </button>
-                    </div>
-                </div>
+{#                <div class="form-section">#}
+{#                    <h5 class="mb-3"><i class="bi bi-lightning me-2"></i>Quick Actions</h5>#}
+{#                    <div class="d-grid gap-2">#}
+{#                        <button class="btn btn-outline-primary" onclick="exportHistory()">#}
+{#                            <i class="bi bi-download me-2"></i>Export History#}
+{#                        </button>#}
+{#                        <button class="btn btn-outline-secondary" onclick="refreshData()">#}
+{#                            <i class="bi bi-arrow-clockwise me-2"></i>Refresh Data#}
+{#                        </button>#}
+{#                    </div>#}
+{#                </div>#}
             </div>
         </div>
     </div>
@@ -447,10 +447,8 @@
             const row = document.createElement('tr');
 
             const timestamp = new Date(transaction.timestamp);
-            const timeString = timestamp.getDate() + "/" +
-                timestamp.getMonth() + " " +
-                String(timestamp.getHours()).padStart(2, '0') + ":" +
-                String(timestamp.getMinutes()).padStart(2, '0');
+            const timeString = `${timestamp.getDate()}/${timestamp.getMonth() + 1}` +
+                ` ${String(timestamp.getHours()).padStart(2, '0')}:${String(timestamp.getMinutes()).padStart(2, '0')}`;
 
             row.innerHTML = `
                 <td>${timeString}</td>

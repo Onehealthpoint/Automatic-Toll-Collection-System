@@ -27,7 +27,6 @@ idea/
 
 # Model files
 *.h5
-*.pt
 *.pth
 *.ckpt
 *.pb
